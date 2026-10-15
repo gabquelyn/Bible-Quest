@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSessionUser } from "@/app/lib/auth";
 import { SESSION_COOKIE, clearSessionCookie } from "@/app/lib/session";
 
+
 const NO_STORE = { "Cache-Control": "no-store" };
 
 /** Who am I? The frontend calls this on load to restore a session after a refresh. */

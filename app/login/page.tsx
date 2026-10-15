@@ -22,7 +22,15 @@ export default function Login() {
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [shakeKey, setShakeKey] = useState(0);
-  const themeId = localStorage.getItem("bible:theme") as ThemeId;
+  const [themeId] = useState<ThemeId>(() => {
+  if (typeof window === "undefined") return "dawn";
+
+  const stored = localStorage.getItem("bible:theme");
+
+  return stored && stored in THEMES
+    ? (stored as ThemeId)
+    : "dawn";
+});
   const theme = THEMES[themeId || "dawn"];
   const router = useRouter();
   async function handleSubmit(e: FormEvent) {
