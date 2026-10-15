@@ -1,13 +1,33 @@
 /**
- * A "whole Bible in a year" plan, balanced by verses.
+ * A "whole Bible in a year" plan with a rhythm, balanced by verses.
  *
- * Chapters are laid out in canonical order and split into 365 consecutive days of roughly
- * equal reading load. Load is measured in verses (plus a small per-chapter overhead), so
- * a day in Numbers 7 or Psalm 119 isn't the same size as a day in Obadiah or Psalms 120-134.
+ * The year is five SEASONS. Every season has the same four MOVEMENTS, always in this order:
+ *
+ *   📜 Story          a run of Old Testament narrative
+ *   🎵 Song           one of the five books of Psalms
+ *   🔥 Wisdom & Prophets
+ *   ✝️ New Testament  the next stretch of the New Testament
+ *
+ * Each of those four "lanes" is read in order from season to season, so nothing is scattered:
+ * the Story picks up where the last Story left off, the New Testament continues where it
+ * stopped, and the five Psalms books come one per season. You never spend more than about a
+ * month on one kind of reading, and every heavy stretch is followed by something lighter.
+ * The year opens with Genesis 1 and ends with Revelation 22.
+ *
+ * Every chapter (1,189) is read exactly once. A movement always starts on a fresh day, and
+ * its days are balanced by weight (verses plus a small per-chapter overhead), so a day in
+ * Numbers 7 or Psalm 119 isn't the same size as a day in Obadiah or Psalms 120-134.
  * Days always contain whole chapters.
  *
- * The plan day is the day of the year (Jan 1 = day 1), so everyone in your group reads
- * the same passage on the same date.
+ * The plan is a 365-day loop that is counted as if it began on PLAN_ANCHOR (Jan 1, 2026).
+ * So on Oct 15, 2026 everyone is on day 288, and nobody has to start from Genesis. The loop
+ * simply keeps going: after Revelation 22 (day 365) it carries on with Genesis 1, so a group
+ * that starts mid-year still gets a full 365 days of reading, then begins again. Everyone shares
+ * the anchor, so everyone reads the same passage on the same date.
+ *
+ * To change the order, edit SEASONS below: move a book to another movement or season and
+ * everything else (days, balance, labels) follows. A coverage check runs when the file loads
+ * and throws if any chapter is missing or listed twice.
  */
 
 /** Verse count of every chapter, per book (KJV/ESV-style versification). */
@@ -88,17 +108,6 @@ export interface Chapter {
   verses: number;
 }
 
-const ALL_CHAPTERS: Chapter[] = BOOKS.flatMap(([book, verses]) =>
-  verses.map((count, i) => ({
-    id: `${book} ${i + 1}`,
-    book,
-    chapter: i + 1,
-    verses: count,
-  })),
-);
-
-export const TOTAL_CHAPTERS = ALL_CHAPTERS.length;
-export const TOTAL_VERSES = ALL_CHAPTERS.reduce((sum, c) => sum + c.verses, 0);
 export const PLAN_DAYS = 365;
 
 /**
@@ -107,6 +116,130 @@ export const PLAN_DAYS = 365;
  * from piling 15+ chapters into one day. Set to 0 for a pure verse-count split.
  */
 const CHAPTER_OVERHEAD = 10;
+
+/* ---------- The shape of the year ---------- */
+
+/** A whole book ("Genesis"), or part of one (["Psalms", 1, 41] = Psalms 1 to 41). */
+type Part = string | [book: string, from: number, to: number];
+
+type MovementKind = "story" | "song" | "wisdom" | "news";
+
+/** The four movements, in the order they are read within every season. */
+const MOVEMENT_ORDER: MovementKind[] = ["story", "song", "wisdom", "news"];
+
+export const MOVEMENT_INFO: Record<MovementKind, { label: string; emoji: string }> = {
+  story: { label: "Story", emoji: "📜" },
+  song: { label: "Song", emoji: "🎵" },
+  wisdom: { label: "Wisdom & Prophets", emoji: "🔥" },
+  news: { label: "New Testament", emoji: "✝️" },
+};
+
+interface Season {
+  name: string;
+  story: Part[];
+  song: Part[];
+  wisdom: Part[];
+  news: Part[];
+}
+
+const SEASONS: Season[] = [
+  {
+    name: "Beginnings",
+    story: ["Genesis", "Exodus"],
+    song: [["Psalms", 1, 41]],
+    wisdom: ["Proverbs", "Ecclesiastes", "Song of Solomon"],
+    news: ["Matthew", "Mark"],
+  },
+  {
+    name: "Wilderness",
+    story: ["Leviticus", "Numbers"],
+    song: [["Psalms", 42, 72]],
+    wisdom: ["Job", "Hosea", "Joel", "Amos", "Obadiah", "Jonah", "Micah"],
+    news: ["Luke", "John"],
+  },
+  {
+    name: "Promised Land",
+    story: ["Deuteronomy", "Joshua", "Judges", "Ruth"],
+    song: [["Psalms", 73, 89]],
+    wisdom: ["Isaiah", "Nahum", "Habakkuk", "Zephaniah"],
+    news: ["Acts", "Romans", "1 Corinthians"],
+  },
+  {
+    name: "Kingdom",
+    story: ["1 Samuel", "2 Samuel", "1 Kings"],
+    song: [["Psalms", 90, 106]],
+    wisdom: ["Jeremiah", "Lamentations", "Daniel"],
+    news: [
+      "2 Corinthians", "Galatians", "Ephesians", "Philippians", "Colossians",
+      "1 Thessalonians", "2 Thessalonians", "1 Timothy", "2 Timothy", "Titus", "Philemon",
+      "Hebrews",
+    ],
+  },
+  {
+    name: "Exile & Return",
+    story: ["2 Kings", "1 Chronicles", "2 Chronicles"],
+    song: [["Psalms", 107, 150]],
+    wisdom: ["Ezekiel", "Ezra", "Nehemiah", "Esther", "Haggai", "Zechariah", "Malachi"],
+    news: ["James", "1 Peter", "2 Peter", "1 John", "2 John", "3 John", "Jude", "Revelation"],
+  },
+];
+
+/* ---------- Chapters, in reading order ---------- */
+
+const VERSES_BY_BOOK = new Map<string, number[]>(BOOKS);
+
+function chaptersOf(part: Part): Chapter[] {
+  const book = typeof part === "string" ? part : part[0];
+  const verses = VERSES_BY_BOOK.get(book);
+  if (!verses) throw new Error(`Reading plan: unknown book "${book}".`);
+
+  const from = typeof part === "string" ? 1 : part[1];
+  const to = typeof part === "string" ? verses.length : part[2];
+  if (from < 1 || to > verses.length || from > to) {
+    throw new Error(`Reading plan: ${book} ${from}-${to} is outside the book (1-${verses.length}).`);
+  }
+
+  return verses.slice(from - 1, to).map((count, i) => ({
+    id: `${book} ${from + i}`,
+    book,
+    chapter: from + i,
+    verses: count,
+  }));
+}
+
+interface Movement {
+  season: number; // index into SEASONS
+  kind: MovementKind;
+  chapters: Chapter[];
+}
+
+const MOVEMENTS: Movement[] = SEASONS.flatMap((season, i) =>
+  MOVEMENT_ORDER.map((kind) => ({
+    season: i,
+    kind,
+    chapters: season[kind].flatMap(chaptersOf),
+  })),
+);
+
+const ALL_CHAPTERS: Chapter[] = MOVEMENTS.flatMap((m) => m.chapters);
+
+/** Throws if the plan skips a chapter or lists one twice, so a bad edit is caught immediately. */
+function assertEveryChapterExactlyOnce() {
+  const seen = new Set<string>();
+  for (const c of ALL_CHAPTERS) {
+    if (seen.has(c.id)) throw new Error(`Reading plan lists ${c.id} more than once.`);
+    seen.add(c.id);
+  }
+  for (const [book, verses] of BOOKS) {
+    for (let i = 1; i <= verses.length; i++) {
+      if (!seen.has(`${book} ${i}`)) throw new Error(`Reading plan is missing ${book} ${i}.`);
+    }
+  }
+}
+assertEveryChapterExactlyOnce();
+
+export const TOTAL_CHAPTERS = ALL_CHAPTERS.length;
+export const TOTAL_VERSES = ALL_CHAPTERS.reduce((sum, c) => sum + c.verses, 0);
 
 /* ---------- Dates ---------- */
 
@@ -122,58 +255,133 @@ export function fromDateKey(key: string): Date {
   return new Date(y, m - 1, d);
 }
 
-/** Day of the year (1-366), clamped to the 365-day plan. */
-export function getPlanDay(date: Date): number {
-  const start = Date.UTC(date.getFullYear(), 0, 1);
+/** The date counted as day 1 of the loop, "YYYY-MM-DD". Moving it shifts everyone's reading. */
+export const PLAN_ANCHOR = "2026-01-01";
+
+/** Whole calendar days from the anchor to `date` (negative before the anchor). */
+function daysSinceAnchor(date: Date, anchor: string): number {
+  const a = fromDateKey(anchor);
+  const first = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
   const current = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
-  const dayOfYear = Math.round((current - start) / 86_400_000) + 1;
-  return Math.min(dayOfYear, PLAN_DAYS);
+  return Math.round((current - first) / 86_400_000);
+}
+
+/**
+ * Which plan day (1-365) a date falls on. Day 1 is the anchor, and every 365 days the plan
+ * starts again at day 1, so it never runs out. Counting in UTC calendar days keeps
+ * daylight-saving changes from shifting anything. Because the loop is a fixed 365 days, a
+ * leap day pushes the calendar one day ahead of it (Jan 1 2029 is day 2, not day 1).
+ */
+export function getPlanDay(date: Date, anchor: string = PLAN_ANCHOR): number {
+  const n = daysSinceAnchor(date, anchor);
+  return (((n % PLAN_DAYS) + PLAN_DAYS) % PLAN_DAYS) + 1;
+}
+
+/** Which pass through the Bible a date is in: 1 for the first 365 days from the anchor, then 2, ... */
+export function getPlanLap(date: Date, anchor: string = PLAN_ANCHOR): number {
+  return Math.floor(daysSinceAnchor(date, anchor) / PLAN_DAYS) + 1;
 }
 
 /* ---------- Plan ---------- */
 
+const weightOf = (c: Chapter) => c.verses + CHAPTER_OVERHEAD;
+
 /**
- * DAY_BOUNDS[d] is the index of the first chapter of plan day d + 1, so plan day `n`
- * covers ALL_CHAPTERS.slice(DAY_BOUNDS[n - 1], DAY_BOUNDS[n]). Built once at load.
- *
- * For each day we aim for an even share of the total weight, then cut at the chapter
- * boundary closest to that target. Because every cut is measured against the running
- * total (not the previous cut), errors never accumulate. Every day keeps at least one
- * chapter, and enough chapters are left for the remaining days.
+ * Shares the 365 days between the movements in proportion to their weight, so a long movement
+ * (Genesis and Exodus) gets more days than a short one (Psalms 73-89). Every movement keeps at
+ * least one day and never more days than it has chapters.
  */
-function buildDayBounds(): number[] {
-  const n = ALL_CHAPTERS.length;
+function allocateDays(weights: number[], limits: number[], total: number): number[] {
+  const sum = weights.reduce((a, b) => a + b, 0);
+  const ideal = weights.map((w) => (w * total) / sum);
+  const days = ideal.map((x, i) => Math.min(limits[i], Math.max(1, Math.floor(x))));
+  let assigned = days.reduce((a, b) => a + b, 0);
 
-  // cumulative[i] = total weight of the first i chapters
-  const cumulative: number[] = [0];
-  for (const c of ALL_CHAPTERS) {
-    cumulative.push(cumulative[cumulative.length - 1] + c.verses + CHAPTER_OVERHEAD);
-  }
-  const totalWeight = cumulative[n];
-
-  const bounds: number[] = [0];
-  for (let day = 1; day < PLAN_DAYS; day++) {
-    const target = (day * totalWeight) / PLAN_DAYS;
-    const min = bounds[day - 1] + 1; // at least one chapter today
-    const max = n - (PLAN_DAYS - day); // leave one chapter for each remaining day
-
-    let cut = min;
-    while (
-      cut < max &&
-      Math.abs(cumulative[cut + 1] - target) <= Math.abs(cumulative[cut] - target)
-    ) {
-      cut++;
+  while (assigned < total) {
+    // give the next day to whoever is furthest below their fair share
+    let best = -1;
+    for (let i = 0; i < days.length; i++) {
+      if (days[i] >= limits[i]) continue;
+      if (best === -1 || ideal[i] - days[i] > ideal[best] - days[best]) best = i;
     }
-    bounds.push(cut);
+    if (best === -1) throw new Error("Reading plan: not enough chapters for the number of days.");
+    days[best]++;
+    assigned++;
   }
-  bounds.push(n);
-  return bounds;
+  while (assigned > total) {
+    // take a day back from whoever is furthest above their fair share
+    let worst = -1;
+    for (let i = 0; i < days.length; i++) {
+      if (days[i] <= 1) continue;
+      if (worst === -1 || days[i] - ideal[i] > days[worst] - ideal[worst]) worst = i;
+    }
+    if (worst === -1) throw new Error("Reading plan: too many movements for the number of days.");
+    days[worst]--;
+    assigned--;
+  }
+  return days;
 }
 
-const DAY_BOUNDS = buildDayBounds();
+/**
+ * Cuts a movement's chapters into `days` runs of roughly equal weight. Each cut is made at
+ * the chapter boundary closest to an even share of the running total (not the previous cut),
+ * so errors never accumulate. Every day keeps at least one chapter.
+ * Returns cut positions: day k covers chapters[cuts[k] .. cuts[k + 1]).
+ */
+function splitEvenly(chapters: Chapter[], days: number): number[] {
+  const n = chapters.length;
+  const cumulative: number[] = [0];
+  for (const c of chapters) cumulative.push(cumulative[cumulative.length - 1] + weightOf(c));
+  const totalWeight = cumulative[n];
+
+  const cuts: number[] = [0];
+  for (let day = 1; day < days; day++) {
+    const target = (day * totalWeight) / days;
+    const min = cuts[day - 1] + 1; // at least one chapter today
+    const max = n - (days - day); // leave one chapter for each remaining day
+
+    let cut = min;
+    while (cut < max && Math.abs(cumulative[cut + 1] - target) <= Math.abs(cumulative[cut] - target)) {
+      cut++;
+    }
+    cuts.push(cut);
+  }
+  cuts.push(n);
+  return cuts;
+}
+
+/**
+ * DAY_BOUNDS[d] is the index (in ALL_CHAPTERS) of the first chapter of plan day d + 1, so plan
+ * day `n` covers ALL_CHAPTERS.slice(DAY_BOUNDS[n - 1], DAY_BOUNDS[n]). DAY_MOVEMENT[d] says
+ * which movement plan day d + 1 belongs to. Both are built once, at load.
+ */
+function buildSchedule() {
+  const weights = MOVEMENTS.map((m) => m.chapters.reduce((sum, c) => sum + weightOf(c), 0));
+  const limits = MOVEMENTS.map((m) => m.chapters.length);
+  const daysPerMovement = allocateDays(weights, limits, PLAN_DAYS);
+
+  const bounds: number[] = [0];
+  const dayMovement: number[] = [];
+  let offset = 0;
+  MOVEMENTS.forEach((m, index) => {
+    const cuts = splitEvenly(m.chapters, daysPerMovement[index]);
+    for (let d = 1; d < cuts.length; d++) {
+      bounds.push(offset + cuts[d]);
+      dayMovement.push(index);
+    }
+    offset += m.chapters.length;
+  });
+  return { bounds, dayMovement };
+}
+
+const { bounds: DAY_BOUNDS, dayMovement: DAY_MOVEMENT } = buildSchedule();
+
+function clampDay(day: number): number {
+  return Math.min(Math.max(Math.trunc(day), 1), PLAN_DAYS);
+}
 
 export function getChaptersForPlanDay(day: number): Chapter[] {
-  const d = Math.min(Math.max(Math.trunc(day), 1), PLAN_DAYS);
+  const d = clampDay(day);
   return ALL_CHAPTERS.slice(DAY_BOUNDS[d - 1], DAY_BOUNDS[d]);
 }
 
@@ -203,10 +411,26 @@ export interface DayReading {
   chapters: Chapter[];
   passage: string;
   verses: number;
+  /** Which of the five seasons this day is in, e.g. { number: 2, name: "Wilderness" } */
+  season: { number: number; name: string };
+  /** Which movement of the season, e.g. { kind: "song", label: "Song", emoji: "🎵" } */
+  movement: { kind: MovementKind; label: string; emoji: string };
+}
+
+export function getReadingForPlanDay(day: number): DayReading {
+  const planDay = clampDay(day);
+  const chapters = getChaptersForPlanDay(planDay);
+  const movement = MOVEMENTS[DAY_MOVEMENT[planDay - 1]];
+  return {
+    planDay,
+    chapters,
+    passage: formatPassage(chapters),
+    verses: countVerses(chapters),
+    season: { number: movement.season + 1, name: SEASONS[movement.season].name },
+    movement: { kind: movement.kind, ...MOVEMENT_INFO[movement.kind] },
+  };
 }
 
 export function getReadingForDate(date: Date): DayReading {
-  const planDay = getPlanDay(date);
-  const chapters = getChaptersForPlanDay(planDay);
-  return { planDay, chapters, passage: formatPassage(chapters), verses: countVerses(chapters) };
+  return getReadingForPlanDay(getPlanDay(date));
 }
