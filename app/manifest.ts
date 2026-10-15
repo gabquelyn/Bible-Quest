@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Bible in a Year",
     short_name: "Bible Quest",
     description: "Read the Bible in a year with your group.",
-    start_url: "/register",
+    start_url: "/login",
     scope: "/",
     display: "standalone", // hides the browser UI so it feels like an app
     orientation: "portrait",

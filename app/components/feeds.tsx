@@ -76,13 +76,15 @@ function PostBubble({
   post,
   own,
   animateIn,
+  themeId
 }: {
   post: FeedPost;
   own: boolean;
   animateIn: boolean;
+  themeId: ThemeId
 }) {
   // The bubble wears the theme of the USER who wrote the post, not the viewer's.
-  const theme = getTheme(post.author.theme);
+  const theme = THEMES[themeId];
 
   return (
     <motion.div
@@ -298,6 +300,7 @@ export default function PostsPage() {
                 post={post}
                 own={isOwnPost(post, me)}
                 animateIn={animateRows}
+                themeId = {me?.theme as ThemeId}
               />
             </Fragment>
           ))}
