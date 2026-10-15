@@ -1,11 +1,12 @@
 import {motion} from "motion/react";
+import { ReactNode } from "react";
 export default function Stat({
   emoji,
   value,
   label,
   delay,
 }: {
-  emoji: string;
+  emoji: string | ReactNode;
   value: number;
   label: string;
   delay: number;

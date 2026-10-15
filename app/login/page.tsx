@@ -1,10 +1,11 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { THEMES } from "../data/themes";
 import Link from "next/link";
 import axios, { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
+import { useThemePreference } from "../components/useThemePreference";
 
 export interface LoginData {
   /** Email or username */
@@ -22,15 +23,7 @@ export default function Login() {
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [shakeKey, setShakeKey] = useState(0);
-  const [themeId] = useState<ThemeId>(() => {
-  if (typeof window === "undefined") return "dawn";
-
-  const stored = localStorage.getItem("bible:theme");
-
-  return stored && stored in THEMES
-    ? (stored as ThemeId)
-    : "dawn";
-});
+  const themeId = useThemePreference();
   const theme = THEMES[themeId || "dawn"];
   const router = useRouter();
   async function handleSubmit(e: FormEvent) {
@@ -52,7 +45,7 @@ export default function Login() {
         identifier: identifier.trim(),
         password,
       });
-      router.push("/")
+      router.push("/");
     } catch (err) {
       const message = (err as AxiosError<ErrorResponse>).response?.data?.error;
       setFormError(message || "Something went wrong.");

@@ -70,3 +70,70 @@ interface PostsPage {
   posts: ApiPost[];
   nextCursor: string | null;
 }
+
+interface SessionUser {
+  id: string;
+  username: string;
+  email: string;
+  theme: string;
+}
+
+/** A post as returned by GET /api/posts. */
+interface ApiPost {
+  id: string;
+  username: string;
+  theme: string; // the poster's theme id, e.g. "ocean"
+  dateKey: string;
+  planDay: number;
+  passage: string;
+  chapterCount: number;
+  content: string;
+  createdAt: string; // ISO date
+  mine: boolean; // true when the signed-in user wrote it
+}
+
+interface PostsResponse {
+  posts: ApiPost[]; // newest first
+  nextCursor: string | null; // pass back as ?cursor= to get older posts
+}
+
+
+
+
+ interface RawAuthor {
+  id?: string;
+  _id?: string;
+  username?: string;
+  theme?: string;
+}
+
+ interface RawPost {
+  id?: string;
+  _id?: string;
+  content: string;
+  createdAt: string; // ISO date
+  passage?: string;
+  user?: RawAuthor | string | null;
+  userId?: RawAuthor | string | null;
+  username?: string;
+}
+
+/** What GET /api/posts returns (newest first); a bare array is accepted too. */
+ interface RawPage {
+  posts: RawPost[];
+  nextCursor?: string | null;
+}
+
+ interface FeedAuthor {
+  id?: string;
+  username?: string;
+  theme?: string;
+}
+
+ interface FeedPost {
+  id: string;
+  content: string;
+  createdAt: string;
+  passage?: string;
+  author: FeedAuthor;
+}

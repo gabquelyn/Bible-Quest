@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, clearSessionCookie, verifySessionToken } from "@/app/lib/session";
 
 
-const PROTECTED_PAGES = ["/"]; // not signed in -> redirect to the login page
+const PROTECTED_PAGES = ["/", "/feed"]; // not signed in -> redirect to the login page
 const PROTECTED_API = ["/api/posts"]; // not signed in -> 401 JSON
 
 const LOGIN_PATH = "/login";

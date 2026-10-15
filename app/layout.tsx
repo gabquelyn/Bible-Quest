@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono, Sniglet, Englebert } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Geist, Geist_Mono, Englebert } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,8 +18,21 @@ const sniglet = Englebert({
 });
 
 export const metadata: Metadata = {
-  title: "Bible Quest",
-  description: "Today's reading is waiting for you, do not miss it",
+  title: "Bible in a Year",
+  applicationName: "Bible in a Year",
+  appleWebApp: {
+    capable: true,
+    title: "Bible",
+    statusBarStyle: "default",
+  },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover", // lets you use env(safe-area-inset-*) for notched phones
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
