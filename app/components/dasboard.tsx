@@ -398,31 +398,43 @@ function DashboardContent({ user }: { user: SessionUser }) {
 
       <div className="relative mx-auto max-w-5xl space-y-5">
         {/* Header */}
-        <motion.header
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`${card} flex items-center justify-between py-4!`}
-        >
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">{theme.emoji}</span>
-            <div>
-              <h1 className="text-lg font-bold text-slate-900">
-                Hello, {username}
-              </h1>
-              <p className="text-xs text-slate-500">
-                Day {reading.planDay} of {PLAN_DAYS}
-              </p>
-            </div>
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onLogout}
-            className="rounded-xl border-2 border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:border-slate-300"
-          >
-            Log out
-          </motion.button>
-        </motion.header>
+    <motion.header
+  initial={{ opacity: 0, y: -16 }}
+  animate={{ opacity: 1, y: 0 }}
+  className={`${card} flex items-center justify-between py-4!`}
+>
+  <div className="flex items-center gap-3">
+    <span className="text-3xl">{theme.emoji}</span>
+    <div>
+      <h1 className="text-lg font-bold text-slate-900">Hello, {username}</h1>
+      <p className="text-xs text-slate-500">
+        Day {reading.planDay} of {PLAN_DAYS}
+      </p>
+    </div>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <motion.button
+      whileHover={{ scale: 1.04 }}
+      whileTap={{ scale: 0.95 }}
+      onClick={() => router.push("/feed")}
+      aria-label="Open chat"
+      className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold shadow ${theme.button}`}
+    >
+      <span>💬</span>
+      <span className="hidden sm:inline">Feed</span>
+    </motion.button>
+
+    <motion.button
+      whileHover={{ scale: 1.04 }}
+      whileTap={{ scale: 0.95 }}
+      onClick={onLogout}
+      className="rounded-xl border-2 border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:border-slate-300"
+    >
+      Log out
+    </motion.button>
+  </div>
+</motion.header>
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">

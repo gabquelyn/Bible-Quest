@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Bible in a Year",
-    short_name: "Bible",
+    short_name: "Bible Quest",
     description: "Read the Bible in a year with your group.",
     start_url: "/register",
     scope: "/",
